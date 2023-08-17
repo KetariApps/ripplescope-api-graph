@@ -1,0 +1,19 @@
+interface Addresses @relationshipProperties {
+  aspect: String!
+  reason: String!
+}
+type Project {
+  uniqueName: String!
+  name: String!
+  problem: String!
+  solution: String!
+  impactAreas: [ImpactArea!]!
+    @relationship(type: "ADDRESSES", properties: "Addresses", direction: OUT)
+  nation: [Nation!]! @relationship(type: "DEPLOYED_TO", direction: OUT)
+}
+type ImpactArea {
+  uniqueName: String!
+}
+type Nation {
+  uniqueName: String!
+}
