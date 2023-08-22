@@ -1,6 +1,19 @@
-interface Addresses @relationshipProperties {
+enum DoughnutCategoryName {
+  SOCIAL
+  ECOLOGICAL
+}
+enum ImpactCategoryName {
+  Atmosphere
+  ChemicalWasteAndSupplyChains
+  EnvironmentalPreservation
+  BasicServices
+  SocialOpportunities
+  SocialRights
+}
+interface Impacts @relationshipProperties {
   aspect: String!
   reason: String!
+  score: Float!
 }
 type Project {
   uniqueName: String!
@@ -8,12 +21,32 @@ type Project {
   problem: String!
   solution: String!
   impactAreas: [ImpactArea!]!
-    @relationship(type: "ADDRESSES", properties: "Addresses", direction: OUT)
+    @relationship(type: "IMPACTS", properties: "Impacts", direction: OUT)
   nation: [Nation!]! @relationship(type: "DEPLOYED_TO", direction: OUT)
 }
 type ImpactArea {
   uniqueName: String!
+  verified: Boolean!
+  context: String
+  description: String
+  name: String
+  questions: String
+  projects: [Project!]!
+    @relationship(type: "IMPACTS", properties: "Impacts", direction: IN)
+  impactCategory: ImpactCategory @relationship(type: "CONTAINS", direction: IN)
+}
+type ImpactCategory {
+  uniqueName: ImpactCategoryName!
+  impactAreas: [ImpactArea!]! @relationship(type: "CONTAINS", direction: OUT)
+  doughnutCategory: DoughnutCategory
+    @relationship(type: "CONTAINS", direction: IN)
+}
+type DoughnutCategory {
+  uniqueName: DoughnutCategoryName!
+  impactAreaCategories: [ImpactCategory!]!
+    @relationship(type: "CONTAINS", direction: OUT)
 }
 type Nation {
   uniqueName: String!
+  projects: [ImpactArea!]! @relationship(type: "DEPLOYED_TO", direction: IN)
 }
