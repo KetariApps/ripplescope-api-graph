@@ -270,6 +270,8 @@ type Project {
   name: String!
   problem: String!
   solution: String!
+  employees: Int
+  context: String!
   impactAreas: [ImpactArea!]!
     @relationship(type: "IMPACTS", properties: "Impacts", direction: OUT)
   locations: [Location!]! @relationship(type: "DEPLOYED_TO", direction: OUT)
