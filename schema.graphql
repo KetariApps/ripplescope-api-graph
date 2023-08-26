@@ -265,6 +265,7 @@ interface Impacts @relationshipProperties {
   reason: String!
   score: Float!
 }
+union Impactable = Impact | ImpactArea
 type Project {
   uniqueName: String! @unique
   name: String!
@@ -272,9 +273,17 @@ type Project {
   solution: String!
   employees: Int
   context: String!
-  impactAreas: [ImpactArea!]!
-    @relationship(type: "IMPACTS", properties: "Impacts", direction: OUT)
+  impacts: [Impact!]!
+    @relationship(type: "HAS", direction: OUT)
   locations: [Location!]! @relationship(type: "DEPLOYED_TO", direction: OUT)
+}
+type Impact {
+  uniqueName: String! @unique
+  name: String!
+  verified: Boolean!
+  project: Project! @relationship(type: "HAS", direction: IN)
+  impactable: [Impactable!]!
+    @relationship(type: "ON", properties: "Impacts", direction: OUT)
 }
 type ImpactArea {
   uniqueName: String! @unique
@@ -283,7 +292,7 @@ type ImpactArea {
   description: String
   name: String
   questions: String
-  projects: [Project!]!
+  impacts: [Impact!]!
     @relationship(type: "IMPACTS", properties: "Impacts", direction: IN)
   impactCategory: ImpactCategory @relationship(type: "CONTAINS", direction: IN)
 }
