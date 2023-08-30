@@ -287,7 +287,6 @@ type Project {
   locations: [Location!]! @relationship(type: "DEPLOYED_TO", direction: OUT)
 }
 type Impact {
-  id: ID @id
   name: String!
   verified: Boolean!
   project: Project! @relationship(type: "HAS", direction: IN)
