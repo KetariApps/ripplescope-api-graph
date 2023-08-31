@@ -1,4 +1,4 @@
-####### ENUMS
+# Enums
 enum NationCode {
   AFG # Afghanistan
   ALA # Aland Islands
@@ -260,31 +260,50 @@ enum ImpactCategoryName {
   SOCIAL_OPPORTUNITIES
   SOCIAL_RIGHTS
 }
-interface Impacts @relationshipProperties {
+
+# Interfaces
+interface ImpactOn @relationshipProperties {
   aspect: String!
   reason: String!
   score: Float!
 }
+interface ProjectImpacts @relationshipProperties {
+  description: String!
+}
+
+# Types
 type Project {
   uniqueName: String! @unique
+  website: String @unique
+  verified: Boolean!
   name: String!
   problem: String!
   solution: String!
   employees: Int
   context: String!
+  impacts: [Impact!]! @relationship(type: "HAS", direction: OUT)
   impactAreas: [ImpactArea!]!
-    @relationship(type: "IMPACTS", properties: "Impacts", direction: OUT)
+    @relationship(type: "IMPACTS", properties: "ProjectImpacts", direction: OUT)
   locations: [Location!]! @relationship(type: "DEPLOYED_TO", direction: OUT)
+}
+type Impact {
+  name: String!
+  verified: Boolean!
+  project: Project! @relationship(type: "HAS", direction: IN)
+  impactArea: ImpactArea!
+    @relationship(type: "ON", properties: "ImpactOn", direction: OUT)
 }
 type ImpactArea {
   uniqueName: String! @unique
   verified: Boolean!
   context: String
   description: String
-  name: String
+  name: String!
   questions: String
+  impacts: [Impact!]!
+    @relationship(type: "ON", properties: "ImpactOn", direction: IN)
   projects: [Project!]!
-    @relationship(type: "IMPACTS", properties: "Impacts", direction: IN)
+    @relationship(type: "IMPACTS", properties: "ProjectImpacts", direction: IN)
   impactCategory: ImpactCategory @relationship(type: "CONTAINS", direction: IN)
 }
 type ImpactCategory {
