@@ -4,53 +4,41 @@ import neo4j from 'neo4j-driver';
 import { mergeTypeDefs } from '@graphql-tools/merge';
 import * as dotenv from 'dotenv';
 import getSchemaFromGithub from './getSchemaFromGithub';
+import { GraphQLError } from 'graphql';
 
 const startServer = async () => {
   //// env stuff
   dotenv.config();
-  const {
-    NEO_URI,
-    NEO_USER,
-    NEO_PASS,
-    PORT,
-    PRODUCTION,
-    GITHUB_ACCESS_TOKEN,
-    GITHUB_CLIENT_ID,
-    GITHUB_REPO_OWNER,
-    GITHUB_REPO_NAME,
-    GITHUB_TARGET_FILE_PATH,
-  } = process.env;
 
   if (
-    NEO_URI === undefined ||
-    NEO_USER === undefined ||
-    NEO_PASS === undefined ||
-    PORT === undefined ||
-    PRODUCTION === undefined ||
-    GITHUB_ACCESS_TOKEN === undefined ||
-    GITHUB_CLIENT_ID === undefined ||
-    GITHUB_REPO_OWNER === undefined ||
-    GITHUB_REPO_NAME === undefined ||
-    GITHUB_TARGET_FILE_PATH === undefined
+    process.env.NEO_URI === undefined ||
+    process.env.NEO_USER === undefined ||
+    process.env.NEO_PASS === undefined ||
+    process.env.PORT === undefined ||
+    process.env.PRODUCTION === undefined ||
+    process.env.GITHUB_ACCESS_TOKEN === undefined ||
+    process.env.GITHUB_REPO_OWNER === undefined ||
+    process.env.GITHUB_REPO_NAME === undefined ||
+    process.env.GITHUB_TARGET_FILE_PATH === undefined
   ) {
     console.error('undefined environment variables');
     return;
   }
-  console.log(`Production mode is: ${PRODUCTION}`);
+  console.log(`Production mode is: ${process.env.PRODUCTION}`);
 
   const plaintextSchema = await getSchemaFromGithub({
-    accessToken: GITHUB_ACCESS_TOKEN,
-    repoName: GITHUB_REPO_NAME,
-    repoOwner: GITHUB_REPO_OWNER,
-    filePath: GITHUB_TARGET_FILE_PATH,
+    accessToken: process.env.GITHUB_ACCESS_TOKEN,
+    repoName: process.env.GITHUB_REPO_NAME,
+    repoOwner: process.env.GITHUB_REPO_OWNER,
+    filePath: process.env.GITHUB_TARGET_FILE_PATH,
   });
   if (plaintextSchema === undefined) {
     throw new Error(
       `Could not get a schema from ${JSON.stringify(
         {
-          repoName: GITHUB_REPO_NAME,
-          repoOwner: GITHUB_REPO_OWNER,
-          filePath: GITHUB_TARGET_FILE_PATH,
+          repoName: process.env.GITHUB_REPO_NAME,
+          repoOwner: process.env.GITHUB_REPO_OWNER,
+          filePath: process.env.GITHUB_TARGET_FILE_PATH,
         },
         null,
         2,
@@ -60,7 +48,10 @@ const startServer = async () => {
 
   //// schema stuff
   const typeDefs = mergeTypeDefs([plaintextSchema]);
-  const driver = neo4j.driver(NEO_URI, neo4j.auth.basic(NEO_USER, NEO_PASS));
+  const driver = neo4j.driver(
+    process.env.NEO_URI,
+    neo4j.auth.basic(process.env.NEO_USER, process.env.NEO_PASS),
+  );
   const neoSchema = new Neo4jGraphQL({
     typeDefs,
     driver,
@@ -73,12 +64,18 @@ const startServer = async () => {
       console.debug(`[${timestamp}] [DEBUG]: ${msg}`);
     },
   };
+  const errorFormatter = (error: GraphQLError) => {
+    const timestamp = new Date().toISOString();
+    console.debug(`[${timestamp}] [DEBUG]: ${error}`);
+    return error;
+  };
 
   Promise.all([neoSchema.getSchema()]).then(([schema]) => {
     const server = new ApolloServer({
       schema,
-      introspection: PRODUCTION === 'FALSE',
+      introspection: process.env.PRODUCTION === 'FALSE',
       logger: customLogger,
+      formatError: errorFormatter,
       context: async ({ req }) => {
         return { req, driver };
       },
@@ -105,7 +102,7 @@ const startServer = async () => {
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
 
-    server.listen(PORT).then(({ url }) => {
+    server.listen(process.env.PORT).then(({ url }) => {
       console.log(`🚀 Server ready at ${url}`);
     });
   });
