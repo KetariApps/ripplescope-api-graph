@@ -260,39 +260,93 @@ enum ImpactCategoryName {
   SOCIAL_OPPORTUNITIES
   SOCIAL_RIGHTS
 }
+enum ProjectStatus {
+  CREATED
+  INFERRING_LOCATION_CONTEXT
+  INFERRING_RIPPLE_CONTEXT
+  EVALUATING_IMPACTS
+  ERROR
+  DONE
+}
 
 # Interfaces
 interface ImpactOn @relationshipProperties {
   aspect: String!
   reason: String!
-  score: Float!
+  score: Float #todo: rename to magnitude
 }
 interface ProjectImpacts @relationshipProperties {
   description: String!
 }
+interface ProjectStatusDetails @relationshipProperties {
+  message: String
+  dump: String
+  timestamp: DateTime! @timestamp(operations: [CREATE])
+}
+interface UserInteractionDetails @relationshipProperties {
+  message: String
+  dump: String
+  timestamp: DateTime! @timestamp(operations: [CREATE])
+}
+
+# Unions
+union UnifiedContext = Context | GeoContext
 
 # Types
+type Status {
+  name: ProjectStatus! @unique
+  projects: [Project!]!
+    @relationship(
+      type: "HAS"
+      properties: "ProjectStatusDetails"
+      direction: IN
+    )
+}
+type User {
+  email: String! @unique
+  familyName: String
+  GivenName: String
+}
 type Project {
+  id: ID @unique
   uniqueName: String! @unique
-  website: String @unique
-  verified: Boolean!
   name: String!
-  problem: String!
-  solution: String!
-  employees: Int
-  context: String!
+  website: String @unique
+  verified: Boolean
+  problem: String
+  solution: String
+  employees: String
+  context: String
   impacts: [Impact!]! @relationship(type: "HAS", direction: OUT)
   impactAreas: [ImpactArea!]!
     @relationship(type: "IMPACTS", properties: "ProjectImpacts", direction: OUT)
-  locations: [Location!]! @relationship(type: "DEPLOYED_TO", direction: OUT)
+  contexts: UnifiedContext!
+    @relationship(type: "ON", properties: "ProjectImpacts", direction: OUT)
+  statuses: [Status!]!
+    @relationship(
+      type: "HAS"
+      properties: "ProjectStatusDetails"
+      direction: OUT
+    )
+  users: [User!]!
+    @relationship(
+      type: "INTERACTED"
+      properties: "UserInteractionDetails"
+      direction: IN
+    )
 }
+
+# todo: change label to :Ripple
 type Impact {
   name: String!
   verified: Boolean!
   project: Project! @relationship(type: "HAS", direction: IN)
   impactArea: ImpactArea!
     @relationship(type: "ON", properties: "ImpactOn", direction: OUT)
+  contexts: Context!
+    @relationship(type: "ON", properties: "ImpactOn", direction: OUT)
 }
+# todo: change label to :Context
 type ImpactArea {
   uniqueName: String! @unique
   verified: Boolean!
@@ -306,6 +360,7 @@ type ImpactArea {
     @relationship(type: "IMPACTS", properties: "ProjectImpacts", direction: IN)
   impactCategory: ImpactCategory @relationship(type: "CONTAINS", direction: IN)
 }
+# todo: change label to :Context
 type ImpactCategory {
   uniqueName: ImpactCategoryName! @unique
   name: String!
@@ -313,16 +368,34 @@ type ImpactCategory {
   doughnutCategory: DoughnutCategory
     @relationship(type: "CONTAINS", direction: IN)
 }
+# todo: change label to :Context
 type DoughnutCategory {
   uniqueName: DoughnutCategoryName! @unique
   name: String!
   impactAreaCategories: [ImpactCategory!]!
     @relationship(type: "CONTAINS", direction: OUT)
 }
-type Location {
-  uniqueName: String! @unique
-  nation: NationCode!
+
+# Contexts
+
+type Context {
+  id: ID @unique
+  name: String
+  description: String!
+  projects: [Project!]!
+    @relationship(type: "IMPACTS", properties: "ProjectImpacts", direction: IN)
+  impacts: [Impact!]!
+    @relationship(type: "ON", properties: "ImpactOn", direction: IN)
+}
+type GeoContext @node(labels: ["Geographic", "Context"]) {
+  id: ID @unique
+  name: String @unique
+  nation: NationCode
   state: String
-  city: String!
-  projects: [ImpactArea!]! @relationship(type: "DEPLOYED_TO", direction: IN)
+  city: String
+  description: String!
+  projects: [Project!]!
+    @relationship(type: "IMPACTS", properties: "ProjectImpacts", direction: IN)
+  impacts: [Impact!]!
+    @relationship(type: "ON", properties: "ImpactOn", direction: IN)
 }
