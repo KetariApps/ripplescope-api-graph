@@ -4,7 +4,8 @@ import neo4j from 'neo4j-driver';
 import { mergeTypeDefs } from '@graphql-tools/merge';
 import * as dotenv from 'dotenv';
 import getSchemaFromGithub from './getSchemaFromGithub';
-import { GraphQLError } from 'graphql';
+import errorLogger from './logging/errorLogger';
+import requestLogger from './logging/requestLogger';
 
 const startServer = async () => {
   //// env stuff
@@ -44,6 +45,18 @@ const startServer = async () => {
         2,
       )}`,
     );
+  } else {
+    console.debug(
+      `Got schema from ${JSON.stringify(
+        {
+          repoName: process.env.GITHUB_REPO_NAME,
+          repoOwner: process.env.GITHUB_REPO_OWNER,
+          filePath: process.env.GITHUB_TARGET_FILE_PATH,
+        },
+        null,
+        2,
+      )}`,
+    );
   }
 
   //// schema stuff
@@ -57,25 +70,12 @@ const startServer = async () => {
     driver,
   });
 
-  const customLogger = {
-    ...console,
-    debug: async (msg: any) => {
-      const timestamp = new Date().toISOString();
-      console.debug(`[${timestamp}] [DEBUG]: ${msg}`);
-    },
-  };
-  const errorFormatter = (error: GraphQLError) => {
-    const timestamp = new Date().toISOString();
-    console.debug(`[${timestamp}] [DEBUG]: ${error}`);
-    return error;
-  };
-
   Promise.all([neoSchema.getSchema()]).then(([schema]) => {
     const server = new ApolloServer({
       schema,
       introspection: process.env.PRODUCTION === 'FALSE',
-      logger: customLogger,
-      formatError: errorFormatter,
+      logger: requestLogger,
+      formatError: errorLogger,
       context: async ({ req }) => {
         return { req, driver };
       },
